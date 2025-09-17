@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: Marketplace API
+  version: 0.1.0
+  description: |
+    Backend core for a marketplace built with Express and MongoDB (Mongoose).
+    Authentication must use JWT tokens sent in the Authorization header as `Bearer <token>`.
+servers:
+  - url: http://localhost:4000
+    description: Local server
+paths:
+  /api/hello:
+    get:
+      summary: Hello endpoint
+      description: Returns a greeting message to verify API is running.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                default:
+                  value:
+                    message: Hello from API!
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/status:
+    get:
+      summary: API status
+      description: Returns current status and timestamp.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    timestamp: 2025-01-01T12:00:00.000Z
+        '500':
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: boolean
+          example: true
+        message:
+          type: string
+        details:
+          type: string
