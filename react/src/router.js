@@ -1,32 +1,40 @@
 import React from 'react';
-import { createBrowserRouter } from 'react-router-dom';
-import MainLayout from './components/Layout/MainLayout';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import AppLayout from './components/AppLayout';
 import Home from './pages/Home';
 import Catalog from './pages/Catalog';
 import Product from './pages/Product';
+import Search from './pages/Search';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Account from './pages/Account';
 import Seller from './pages/Seller';
-import Search from './pages/Search';
-import Login from './pages/Auth/Login';
-import Register from './pages/Auth/Register';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import { getToken } from './hooks/useAuth';
+
+function RequireAuth({ children }) {
+  const token = getToken();
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <MainLayout />,
+    element: <AppLayout />,
     children: [
       { index: true, element: <Home /> },
       { path: 'catalog', element: <Catalog /> },
       { path: 'product/:idOrSlug', element: <Product /> },
-      { path: 'cart', element: <Cart /> },
-      { path: 'checkout', element: <Checkout /> },
-      { path: 'account', element: <Account /> },
-      { path: 'seller/:id', element: <Seller /> },
       { path: 'search', element: <Search /> },
-      { path: 'auth/login', element: <Login /> },
-      { path: 'auth/register', element: <Register /> },
+      { path: 'cart', element: <Cart /> },
+      { path: 'checkout', element: <RequireAuth><Checkout /></RequireAuth> },
+      { path: 'account', element: <RequireAuth><Account /></RequireAuth> },
+      { path: 'seller/:id', element: <Seller /> },
+      { path: 'login', element: <Login /> },
+      { path: 'register', element: <Register /> },
+      { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
 ]);

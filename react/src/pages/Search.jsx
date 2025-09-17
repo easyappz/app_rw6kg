@@ -1,56 +1,42 @@
-import React, { useMemo } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listProducts } from '../api/products';
-import { Card, List, Typography, Empty, Skeleton, Alert } from 'antd';
+import { Row, Col, Typography, Card, Skeleton, Empty } from 'antd';
+import ProductCard from '../components/ProductCard';
 
-function useQueryParams() {
-  const { search } = useLocation();
-  return useMemo(() => new URLSearchParams(search), [search]);
-}
-
-function Search() {
-  const params = useQueryParams();
+export default function Search() {
+  const [params] = useSearchParams();
   const q = params.get('q') || '';
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['search', q],
-    queryFn: () => listProducts({ q, page: 1, limit: 24 }),
-    enabled: q.length > 0,
+    queryFn: () => listProducts({ q, page: 1, limit: 24, isActive: true }),
+    enabled: Boolean(q),
   });
-
-  const items = Array.isArray(data?.items) ? data.items : [];
 
   return (
     <div>
-      <Typography.Title level={3} style={{ marginBottom: 16 }}>Результаты поиска{q ? `: ${q}` : ''}</Typography.Title>
-      {q.length === 0 ? (
-        <Card><Typography.Text type="secondary">Введите запрос в поиске сверху.</Typography.Text></Card>
-      ) : isLoading ? (
-        <Skeleton active />
-      ) : isError ? (
-        <Alert type="error" message="Не удалось выполнить поиск" description={String(error?.message || 'Ошибка')} />
-      ) : items.length === 0 ? (
+      <Typography.Title level={2}>Поиск: {q || 'запрос пуст'}</Typography.Title>
+      {isLoading ? (
+        <Row gutter={[16, 16]}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={i}><Card><Skeleton active /></Card></Col>
+          ))}
+        </Row>
+      ) : error ? (
+        <Card type="inner" title="Ошибка">Не удалось выполнить поиск</Card>
+      ) : (data?.items || []).length === 0 ? (
         <Empty description="Ничего не найдено" />
       ) : (
-        <List
-          grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4 }}
-          dataSource={items}
-          renderItem={(p) => (
-            <List.Item key={p._id}>
-              <Card hoverable>
-                <Typography.Title level={5} style={{ minHeight: 40 }}>{p.title}</Typography.Title>
-                <Typography.Text strong>{typeof p.price === 'number' ? `${p.price} ₽` : '—'}</Typography.Text>
-                <div style={{ marginTop: 8 }}>
-                  <Link to={`/product/${p.slug || p._id}`}>Подробнее</Link>
-                </div>
-              </Card>
-            </List.Item>
-          )}
-        />
+        <Row gutter={[16, 16]}>
+          {(data?.items || []).map((p) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={p._id}>
+              <ProductCard product={p} />
+            </Col>
+          ))}
+        </Row>
       )}
     </div>
   );
 }
-
-export default Search;

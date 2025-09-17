@@ -1,64 +1,43 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Card, Typography, Row, Col, List, Skeleton, Alert } from 'antd';
 import { getSeller, listSellerProducts } from '../api/sellers';
+import { Card, Row, Col, Typography, Skeleton } from 'antd';
+import ProductCard from '../components/ProductCard';
 
-function Seller() {
+export default function Seller() {
   const { id } = useParams();
 
-  const { data: sellerData, isLoading: loadingSeller, isError: sellerError, error: sellerErr } = useQuery({
-    queryKey: ['seller', id],
-    queryFn: () => getSeller(id),
-    enabled: Boolean(id),
-  });
-
-  const { data: productsData, isLoading: loadingProducts, isError: productsError, error: productsErr } = useQuery({
-    queryKey: ['seller-products', id],
-    queryFn: () => listSellerProducts(id, { page: 1, limit: 20 }),
-    enabled: Boolean(id),
-  });
-
-  const seller = sellerData?.item || sellerData?.seller || sellerData || {};
-  const items = Array.isArray(productsData?.items) ? productsData.items : [];
+  const { data: sellerData, isLoading: loadingSeller } = useQuery({ queryKey: ['seller', id], queryFn: () => getSeller(id) });
+  const { data: productsData, isLoading: loadingProducts } = useQuery({ queryKey: ['sellerProducts', id], queryFn: () => listSellerProducts(id, { page: 1, limit: 24 }) });
 
   return (
     <div>
-      {sellerError && <Alert type="error" message="Не удалось загрузить продавца" description={String(sellerErr?.message || 'Ошибка')} style={{ marginBottom: 16 }} />}
-      <Card loading={loadingSeller} style={{ marginBottom: 16 }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>{seller.shopName || 'Продавец'}</Typography.Title>
-        <Typography.Paragraph type="secondary">{seller.description || 'Описание продавца.'}</Typography.Paragraph>
+      <Card style={{ marginBottom: 16 }}>
+        {loadingSeller ? (
+          <Skeleton active />
+        ) : (
+          <>
+            <Typography.Title level={3}>{sellerData?.shopName || sellerData?.item?.shopName || 'Продавец'}</Typography.Title>
+            <Typography.Text type="secondary">{sellerData?.description || sellerData?.item?.description || ''}</Typography.Text>
+          </>
+        )}
       </Card>
-
-      {productsError && <Alert type="error" message="Не удалось загрузить товары продавца" description={String(productsErr?.message || 'Ошибка')} style={{ marginBottom: 16 }} />}
       {loadingProducts ? (
-        <Skeleton active />
+        <Row gutter={[16, 16]}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={i}><Card><Skeleton active /></Card></Col>
+          ))}
+        </Row>
       ) : (
-        <List
-          grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4 }}
-          dataSource={items}
-          renderItem={(p) => (
-            <List.Item key={p._id}>
-              <Card
-                hoverable
-                cover={<div style={{ height: 140, background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {Array.isArray(p.images) && p.images[0] ? (
-                    <img src={p.images[0]} alt={p.title} style={{ maxHeight: 120, objectFit: 'contain' }} />
-                  ) : 'Изображение'}
-                </div>}
-              >
-                <Typography.Title level={5} style={{ minHeight: 40 }}>{p.title || 'Товар'}</Typography.Title>
-                <Typography.Text strong>{typeof p.price === 'number' ? `${p.price} ₽` : '—'}</Typography.Text>
-                <div style={{ marginTop: 8 }}>
-                  <Link to={`/product/${p.slug || p._id}`}>Подробнее</Link>
-                </div>
-              </Card>
-            </List.Item>
-          )}
-        />)
-      }
+        <Row gutter={[16, 16]}>
+          {(productsData?.items || []).map((p) => (
+            <Col xs={24} sm={12} md={8} lg={6} key={p._id}>
+              <ProductCard product={p} />
+            </Col>
+          ))}
+        </Row>
+      )}
     </div>
   );
 }
-
-export default Seller;
