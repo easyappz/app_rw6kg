@@ -1,13 +1,10 @@
 const express = require('express');
+const { requireAuth, requireRoles } = require('@src/middleware/auth');
+const { uploadMiddlewareAny, handleImagesUpload } = require('@src/controllers/uploadController');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-  try {
-    return res.json({ resource: 'upload', ok: true });
-  } catch (err) {
-    return res.status(500).json({ error: true, message: err.message, details: err.stack });
-  }
-});
+// POST /api/upload/images (seller/admin)
+router.post('/images', requireAuth, requireRoles('seller', 'admin'), uploadMiddlewareAny, handleImagesUpload);
 
 module.exports = router;

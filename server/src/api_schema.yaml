@@ -2,31 +2,123 @@ openapi: 3.0.3
 info:
   title: Easyappz Marketplace API
   version: 1.0.0
-  description: Authentication and Users endpoints
+  description: |
+    Core catalog API (categories, sellers, products, reviews, uploads).
+    Authentication via Authorization header with Bearer JWT token. No cookies.
 servers:
-  - url: http://localhost:4000
+  - url: /api
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Category:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        slug: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Seller:
+      type: object
+      properties:
+        _id: { type: string }
+        user: { type: string }
+        shopName: { type: string }
+        description: { type: string, nullable: true }
+        rating: { type: number }
+        followers: { type: number }
+        avatarUrl: { type: string, nullable: true }
+        bannerUrl: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Product:
+      type: object
+      properties:
+        _id: { type: string }
+        title: { type: string }
+        slug: { type: string, nullable: true }
+        description: { type: string }
+        price: { type: number }
+        discountPrice: { type: number, nullable: true }
+        images:
+          type: array
+          items: { type: string }
+        stock: { type: number }
+        category: { anyOf: [{ $ref: '#/components/schemas/Category' }, { type: string, nullable: true }] }
+        seller: { anyOf: [{ $ref: '#/components/schemas/Seller' }, { type: string, nullable: true }] }
+        ratingAvg: { type: number }
+        reviewsCount: { type: number }
+        attributes: { type: object }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Review:
+      type: object
+      properties:
+        _id: { type: string }
+        product: { type: string }
+        user: { type: string }
+        rating: { type: number }
+        comment: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PaginatedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { type: object }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+security:
+  - bearerAuth: []
 paths:
-  /api/auth/register:
+  /categories:
+    get:
+      summary: List categories (paginated)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Category' }
+        '500': { description: Server error }
     post:
-      summary: Register a new user
-      description: Creates a new user and returns JWT token with user profile
+      summary: Create category
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [name, email, password]
+              required: [name]
               properties:
-                name:
-                  type: string
-                  example: John Doe
-                email:
-                  type: string
-                  example: john@example.com
-                password:
-                  type: string
-                  example: secret123
+                name: { type: string }
+                slug: { type: string, nullable: true }
+                description: { type: string, nullable: true }
       responses:
         '201':
           description: Created
@@ -35,100 +127,47 @@ paths:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                  token:
-                    type: string
-                  user:
-                    $ref: '#/components/schemas/UserPublic'
-              examples:
-                success:
-                  value:
-                    success: true
-                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                    user:
-                      _id: 666f6f2d6261722d7171aa00
-                      name: John Doe
-                      email: john@example.com
-                      role: buyer
-                      avatarUrl: null
-                      phone: null
-                      addresses: []
-                      createdAt: 2025-01-01T10:00:00.000Z
-                      updatedAt: 2025-01-01T10:00:00.000Z
-        '400':
-          description: Validation error
-        '409':
-          description: Email already in use
-        '500':
-          description: Server error
-
-  /api/auth/login:
-    post:
-      summary: Login
-      description: Authenticates by email and password and returns JWT token with user profile
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password]
-              properties:
-                email:
-                  type: string
-                  example: john@example.com
-                password:
-                  type: string
-                  example: secret123
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  token:
-                    type: string
-                  user:
-                    $ref: '#/components/schemas/UserPublic'
-        '401':
-          description: Invalid credentials
-        '500':
-          description: Server error
-
-  /api/auth/me:
-    get:
-      summary: Get current user profile
-      description: Returns current user profile by JWT
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  user:
-                    $ref: '#/components/schemas/UserPublic'
-        '401':
-          description: Unauthorized
-        '404':
-          description: User not found
-        '500':
-          description: Server error
-
-  /api/auth/me:
+                  item: { $ref: '#/components/schemas/Category' }
+        '400': { description: Bad request }
+  /categories/{id}:
     put:
-      summary: Update current user profile
-      description: Updates name, phone, avatarUrl, addresses
+      summary: Update category
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                slug: { type: string }
+                description: { type: string }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+    delete:
+      summary: Delete category
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+        '404': { description: Not found }
+
+  /sellers/register:
+    post:
+      summary: Create seller profile for current user
       security:
         - bearerAuth: []
       requestBody:
@@ -137,156 +176,268 @@ paths:
           application/json:
             schema:
               type: object
+              required: [shopName]
               properties:
-                name:
+                shopName: { type: string }
+                description: { type: string }
+                avatarUrl: { type: string }
+                bannerUrl: { type: string }
+      responses:
+        '201': { description: Created }
+        '400': { description: Bad request }
+
+  /sellers/{id}:
+    get:
+      summary: Get seller profile by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+        '400': { description: Invalid id }
+        '404': { description: Not found }
+
+  /sellers/{id}/products:
+    get:
+      summary: List products of a seller (filters, sorting, pagination)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string, description: 'Full-text search (uses MongoDB $text)' }
+        - in: query
+          name: category
+          schema: { type: string, description: 'Category id or slug' }
+        - in: query
+          name: priceMin
+          schema: { type: number }
+        - in: query
+          name: priceMax
+          schema: { type: number }
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [price_asc, price_desc, createdAt_asc, createdAt_desc, rating_asc, rating_desc]
+            default: createdAt_desc
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200': { description: OK }
+        '400': { description: Invalid seller id }
+
+  /products:
+    get:
+      summary: List products (filters, sorting, pagination)
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, description: 'Full-text search using $text (title, description)' }
+        - in: query
+          name: category
+          schema: { type: string, description: 'Category id or slug' }
+        - in: query
+          name: seller
+          schema: { type: string, description: 'Seller id' }
+        - in: query
+          name: priceMin
+          schema: { type: number }
+        - in: query
+          name: priceMax
+          schema: { type: number }
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [price_asc, price_desc, createdAt_asc, createdAt_desc, rating_asc, rating_desc]
+            default: createdAt_desc
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+        - in: query
+          name: isActive
+          schema: { type: boolean, description: 'Filter by active state. Defaults to true.' }
+      responses:
+        '200': { description: OK }
+        '500': { description: Server error }
+    post:
+      summary: Create product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, price]
+              properties:
+                title: { type: string }
+                slug: { type: string, nullable: true }
+                description: { type: string }
+                price: { type: number }
+                discountPrice: { type: number }
+                images:
+                  type: array
+                  items: { type: string }
+                stock: { type: number }
+                category: { type: string, description: 'Category id' }
+                seller: { type: string, description: 'Seller id (admin only)' }
+                attributes: { type: object }
+                isActive: { type: boolean }
+      responses:
+        '201': { description: Created }
+        '400': { description: Bad request }
+
+  /products/{idOrSlug}:
+    get:
+      summary: Get product by id or slug
+      parameters:
+        - in: path
+          name: idOrSlug
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+  /products/{id}:
+    put:
+      summary: Update product (owner or admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                slug: { type: string }
+                description: { type: string }
+                price: { type: number }
+                discountPrice: { type: number }
+                images:
+                  type: array
+                  items: { type: string }
+                stock: { type: number }
+                category: { type: string }
+                attributes: { type: object }
+                isActive: { type: boolean }
+      responses:
+        '200': { description: OK }
+        '400': { description: Bad request }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+    delete:
+      summary: Delete product (owner or admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+
+  /products/{id}/reviews:
+    get:
+      summary: List reviews for a product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+        '400': { description: Invalid product id }
+    post:
+      summary: Add a review for a product (one per user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: number, minimum: 1, maximum: 5 }
+                comment: { type: string }
+      responses:
+        '201': { description: Created }
+        '400': { description: Bad request or duplicate }
+
+  /reviews/{id}:
+    delete:
+      summary: Delete review (owner or admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+
+  /upload/images:
+    post:
+      summary: Upload images (seller/admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
                   type: string
-                  example: John Updated
-                phone:
-                  type: string
-                  example: '+1 555 123 456'
-                avatarUrl:
-                  type: string
-                  example: https://cdn.example.com/avatars/u1.png
-                addresses:
+                  format: binary
+                files:
                   type: array
                   items:
-                    $ref: '#/components/schemas/Address'
-                  example:
-                    - label: Home
-                      country: USA
-                      city: NY
-                      street: 5th Avenue 10
-                      zip: '10001'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  user:
-                    $ref: '#/components/schemas/UserPublic'
-        '401':
-          description: Unauthorized
-        '404':
-          description: User not found
-        '500':
-          description: Server error
-
-  /api/auth/password:
-    put:
-      summary: Change password
-      description: Changes the current user's password
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [oldPassword, newPassword]
-              properties:
-                oldPassword:
-                  type: string
-                  example: secret123
-                newPassword:
-                  type: string
-                  example: newSecret456
-      responses:
-        '200':
-          description: Password changed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
                     type: string
-        '400':
-          description: Validation or old password mismatch
-        '401':
-          description: Unauthorized
-        '404':
-          description: User not found
-        '500':
-          description: Server error
-
-  /api/users/me:
-    get:
-      summary: Alias for /api/auth/me
-      description: Returns current user profile by JWT
-      security:
-        - bearerAuth: []
+                    format: binary
       responses:
-        '200':
-          description: OK
+        '201':
+          description: Uploaded
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                  user:
-                    $ref: '#/components/schemas/UserPublic'
-        '401':
-          description: Unauthorized
-        '404':
-          description: User not found
-        '500':
-          description: Server error
-
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-  schemas:
-    Address:
-      type: object
-      properties:
-        label:
-          type: string
-        country:
-          type: string
-        city:
-          type: string
-        street:
-          type: string
-        zip:
-          type: string
-    UserPublic:
-      type: object
-      properties:
-        _id:
-          type: string
-        name:
-          type: string
-        email:
-          type: string
-        role:
-          type: string
-          enum: [buyer, seller, admin]
-        avatarUrl:
-          type: string
-          nullable: true
-        phone:
-          type: string
-          nullable: true
-        addresses:
-          type: array
-          items:
-            $ref: '#/components/schemas/Address'
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+                  urls:
+                    type: array
+                    items: { type: string, example: /uploads/1700000000000-filename.jpg }
+        '400': { description: Bad request }

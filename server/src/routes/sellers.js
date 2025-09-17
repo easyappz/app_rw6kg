@@ -1,13 +1,16 @@
 const express = require('express');
+const { requireAuth, requireRoles } = require('@src/middleware/auth');
+const controller = require('@src/controllers/sellerController');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-  try {
-    return res.json({ resource: 'sellers', ok: true });
-  } catch (err) {
-    return res.status(500).json({ error: true, message: err.message, details: err.stack });
-  }
-});
+// GET /api/sellers/:id
+router.get('/:id', controller.getSeller);
+
+// GET /api/sellers/:id/products
+router.get('/:id/products', controller.getSellerProducts);
+
+// POST /api/sellers/register (seller/admin)
+router.post('/register', requireAuth, requireRoles('seller', 'admin'), controller.registerSeller);
 
 module.exports = router;
