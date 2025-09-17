@@ -1,14 +1,12 @@
-import logo from './logo.svg';
+import React from 'react';
 import ErrorBoundary from './ErrorBoundary';
-import './App.css';
 
 function App() {
   return (
     <ErrorBoundary>
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-        </header>
+      <div style={{ padding: 24 }}>
+        <h2>Приложение инициализировано</h2>
+        <p>Навигация работает через RouterProvider. Откройте любую страницу из шапки.</p>
       </div>
     </ErrorBoundary>
   );
