@@ -41,6 +41,20 @@ try {
   console.error('Failed to mount upload routes:', err.message);
 }
 
+// Cart routes
+try {
+  router.use('/cart', require('@src/routes/cart'));
+} catch (err) {
+  console.error('Failed to mount cart routes:', err.message);
+}
+
+// Orders routes
+try {
+  router.use('/orders', require('@src/routes/orders'));
+} catch (err) {
+  console.error('Failed to mount orders routes:', err.message);
+}
+
 // GET /api/hello
 router.get('/hello', async (req, res) => {
   try {
