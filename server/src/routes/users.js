@@ -1,13 +1,10 @@
 const express = require('express');
+const authMiddleware = require('@src/middlewares/auth');
+const { me } = require('@src/controllers/authController');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-  try {
-    return res.json({ resource: 'users', ok: true });
-  } catch (err) {
-    return res.status(500).json({ error: true, message: err.message, details: err.stack });
-  }
-});
+// Alias for /api/auth/me
+router.get('/me', authMiddleware, me);
 
 module.exports = router;

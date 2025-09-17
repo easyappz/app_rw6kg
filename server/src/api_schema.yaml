@@ -1,76 +1,292 @@
 openapi: 3.0.3
 info:
-  title: Marketplace API
-  version: 0.1.0
-  description: |
-    Backend core for a marketplace built with Express and MongoDB (Mongoose).
-    Authentication must use JWT tokens sent in the Authorization header as `Bearer <token>`.
+  title: Easyappz Marketplace API
+  version: 1.0.0
+  description: Authentication and Users endpoints
 servers:
   - url: http://localhost:4000
-    description: Local server
 paths:
-  /api/hello:
-    get:
-      summary: Hello endpoint
-      description: Returns a greeting message to verify API is running.
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      description: Creates a new user and returns JWT token with user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  example: John Doe
+                email:
+                  type: string
+                  example: john@example.com
+                password:
+                  type: string
+                  example: secret123
       responses:
-        '200':
-          description: Successful response
+        '201':
+          description: Created
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/UserPublic'
+              examples:
+                success:
+                  value:
+                    success: true
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    user:
+                      _id: 666f6f2d6261722d7171aa00
+                      name: John Doe
+                      email: john@example.com
+                      role: buyer
+                      avatarUrl: null
+                      phone: null
+                      addresses: []
+                      createdAt: 2025-01-01T10:00:00.000Z
+                      updatedAt: 2025-01-01T10:00:00.000Z
+        '400':
+          description: Validation error
+        '409':
+          description: Email already in use
+        '500':
+          description: Server error
+
+  /api/auth/login:
+    post:
+      summary: Login
+      description: Authenticates by email and password and returns JWT token with user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: john@example.com
+                password:
+                  type: string
+                  example: secret123
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/UserPublic'
+        '401':
+          description: Invalid credentials
+        '500':
+          description: Server error
+
+  /api/auth/me:
+    get:
+      summary: Get current user profile
+      description: Returns current user profile by JWT
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/UserPublic'
+        '401':
+          description: Unauthorized
+        '404':
+          description: User not found
+        '500':
+          description: Server error
+
+  /api/auth/me:
+    put:
+      summary: Update current user profile
+      description: Updates name, phone, avatarUrl, addresses
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: John Updated
+                phone:
+                  type: string
+                  example: '+1 555 123 456'
+                avatarUrl:
+                  type: string
+                  example: https://cdn.example.com/avatars/u1.png
+                addresses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Address'
+                  example:
+                    - label: Home
+                      country: USA
+                      city: NY
+                      street: 5th Avenue 10
+                      zip: '10001'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/UserPublic'
+        '401':
+          description: Unauthorized
+        '404':
+          description: User not found
+        '500':
+          description: Server error
+
+  /api/auth/password:
+    put:
+      summary: Change password
+      description: Changes the current user's password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldPassword, newPassword]
+              properties:
+                oldPassword:
+                  type: string
+                  example: secret123
+                newPassword:
+                  type: string
+                  example: newSecret456
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
                   message:
                     type: string
-              examples:
-                default:
-                  value:
-                    message: Hello from API!
+        '400':
+          description: Validation or old password mismatch
+        '401':
+          description: Unauthorized
+        '404':
+          description: User not found
         '500':
-          description: Error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/status:
+          description: Server error
+
+  /api/users/me:
     get:
-      summary: API status
-      description: Returns current status and timestamp.
+      summary: Alias for /api/auth/me
+      description: Returns current user profile by JWT
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Successful response
+          description: OK
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
-                    type: string
-                    example: ok
-                  timestamp:
-                    type: string
-                    format: date-time
-              examples:
-                ok:
-                  value:
-                    status: ok
-                    timestamp: 2025-01-01T12:00:00.000Z
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/UserPublic'
+        '401':
+          description: Unauthorized
+        '404':
+          description: User not found
         '500':
-          description: Error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Server error
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
-    ErrorResponse:
+    Address:
       type: object
       properties:
-        error:
-          type: boolean
-          example: true
-        message:
+        label:
           type: string
-        details:
+        country:
           type: string
+        city:
+          type: string
+        street:
+          type: string
+        zip:
+          type: string
+    UserPublic:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [buyer, seller, admin]
+        avatarUrl:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
